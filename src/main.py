@@ -2,6 +2,7 @@ from textnode import TextNode, TextType
 from copystatic import copy_static
 from markdown_blocks import markdown_to_html_node
 
+import sys
 import os
 import re
 import shutil
@@ -22,7 +23,7 @@ def generate_page(gen_from_path, gen_template_path, gen_dest_path):
     with open(gen_dest_path, "w", encoding="utf-8") as f:
         f.write(html)
 
-def rec_generate_page(content_dir, gen_template_path, public_path):
+def rec_generate_page(content_dir, gen_template_path, public_path, base_path):
     for entry in os.listdir(content_dir):
         src_path=os.path.join(content_dir, entry)
         dst_path=os.path.join(public_path, entry.replace(".md", ".html"))
@@ -37,14 +38,16 @@ def rec_generate_page(content_dir, gen_template_path, public_path):
             
             html = template.replace("{{ Title }}", f" {title} ")
             html = html.replace("{{ Content }}", f" {html_after} ")
-            
+
+            html = html.replace('href="/', f'href="{base_path}')
+            html = html.replace('src="/', f'src="{base_path}')
             os.makedirs(os.path.dirname(dst_path), exist_ok=True)
             with open(dst_path, "w", encoding="utf-8") as f:
                 f.write(html)
         else:
             print(f"Created new folder {dst_path}")
             os.mkdir(dst_path)
-            rec_generate_page(src_path,gen_template_path, dst_path)
+            rec_generate_page(src_path,gen_template_path, dst_path, base_path)
 
 def extract_title(markdown):
     lines=markdown.split('\n')
@@ -57,17 +60,19 @@ def extract_title(markdown):
 
 def main():
 
+    base_path = sys.argv[1] if len(sys.argv) > 1 else "/"
+
     base_dir = os.path.dirname(os.path.abspath(__file__))  # путь до src/main.py
     root_dir = os.path.abspath(os.path.join(base_dir, ".."))  # подняться в корень проекта
     content_dir=os.path.join(root_dir, "content")
     blog_dir=os.path.join(content_dir, "blog")
 
     static_path = os.path.join(root_dir, "static")
-    public_path = os.path.join(root_dir, "public")
+    public_path = os.path.join(root_dir, "docs")
     gen_template_path = os.path.join(root_dir,"template.html")
 
     copy_static(static_path,public_path)
-    rec_generate_page(content_dir, gen_template_path, public_path)
+    rec_generate_page(content_dir, gen_template_path, public_path, base_path)
 
 if __name__ == "__main__":
     main()
